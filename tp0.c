@@ -100,10 +100,12 @@ int main(int argc, char * const argv[]){
 	int encontroConst = -1;
 	int encontroOutput = -1;
 	int encontroOrigen = -1;
+	int salidaConsola = -1;
 	char* ptrOrigen;
 	char* constante;
 	char* output;
 	char* res;
+	
 
 	/*
 	complejo* unComplejo = malloc(sizeof(complejo));
@@ -144,7 +146,8 @@ int main(int argc, char * const argv[]){
 			break;
 		case 'o' : 
 			encontroOutput = 1;
-			output = optarg; 
+			if (strcmp(optarg, "-") == 0) salidaConsola = 1;
+			output = optarg;
 			break;
 		default: print_usage(); 
 			exit(EXIT_FAILURE);
@@ -192,14 +195,14 @@ int main(int argc, char * const argv[]){
 
 	if (encontroAlto == 1){
 	} else {
-		//altoRectangulo = 4;
-		altoRectangulo = 0.5;
+		altoRectangulo = 4;
+		//altoRectangulo = 0.5;
 	}
 
 	if (encontroAncho == 1){
 	} else {
-		//anchoRectangulo = 4;
-		anchoRectangulo = 0.5;
+		anchoRectangulo = 4;
+		//anchoRectangulo = 0.5;
 	}
 
 	if (encontroConst == 1){
@@ -221,8 +224,8 @@ int main(int argc, char * const argv[]){
 		}
 	} else {
 		//va 0 0
-		origen->parteReal = -0.35;
-		origen->parteImaginaria = 0.3;	
+		origen->parteReal = 0;
+		origen->parteImaginaria = 0;	
 	}
 
 	if (encontroRes == 1){
@@ -232,8 +235,8 @@ int main(int argc, char * const argv[]){
     	pch = strtok (NULL, "x");
     	resolucionVertical = atoi(pch);
 	} else {
-		resolucionHorizontal = 1000;
-		resolucionVertical = 1000;
+		resolucionHorizontal = 640;
+		resolucionVertical = 480;
 	}
 
 	printf("Verificacion parametros: \n");
@@ -273,7 +276,7 @@ int main(int argc, char * const argv[]){
 	}
 
 	FILE *fp;
-	fp=fopen("JuliasSet.pgm", "w");
+	fp=fopen(output, "wb");
 	if(fp == NULL) return 1;
 
 	fprintf(fp, "P2\n");
@@ -287,5 +290,16 @@ int main(int argc, char * const argv[]){
 		fprintf(fp, "\n");
 	}
 	fclose(fp);
+
+	if (salidaConsola == 1){
+		fp=fopen(output, "rt");
+		char c;
+		while((c=fgetc(fp)) !=EOF){
+        	printf("%c",c);
+    	}
+
+    	 fclose(fp);
+    	 remove(output);
+	}
 	return 0;
 }
