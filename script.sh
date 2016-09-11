@@ -1,0 +1,6 @@
+#!/bin/bash
+echo Compilando...
+gcc tp0_otraedicion.c -o tp0
+
+echo Ejecutando...
+./tp0 -o -

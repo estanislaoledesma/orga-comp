@@ -236,8 +236,8 @@ int main(int argc, char * const argv[]){
 		fp=fopen(output, "r");
 		char c;
 
-		while(feof(fp) != 0){
-        	printf( "%c", fgetc(fp) );
+		while((c=fgetc(fp)) !=EOF){
+        	printf( "%c", c );
     	}
 
     	 fclose(fp);
