@@ -13,35 +13,6 @@ typedef struct complejo{
 	float parteImaginaria;
 }complejo;
 
-void multComplejos(complejo* z1, complejo* z2){
-	//Multiplica dos complejos. El resultado pisa el valor del primer argumento.
-	complejo temp;
-	temp.parteReal = ((z1->parteReal)*(z2->parteReal))-((z1->parteImaginaria)*(z2->parteImaginaria));
-	temp.parteImaginaria = ((z1->parteImaginaria)*(z2->parteReal))+((z1->parteReal)*(z2->parteImaginaria));
-	z1->parteReal = temp.parteReal;
-	z1->parteImaginaria = temp.parteImaginaria;
-}
-
-void sumaComplejos(complejo* z1, complejo* z2){
-	//Suma dos complejos. El resultado pisa el valor del primer argumento.
-	z1->parteReal = ((z1->parteReal)+(z2->parteReal));
-	z1->parteImaginaria = ((z1->parteImaginaria)+(z2->parteImaginaria));
-}
-
-void imprimirComplejo(complejo* z){
-	//Imprime por pantalla un complejo en forma binomica.
-	if (z->parteImaginaria < 0){
-		printf("%f%fi",z->parteReal,z->parteImaginaria);
-	} else {
-		printf("%f+%fi",z->parteReal,z->parteImaginaria);
-	}
-}
-
-float valorAbsoluto(complejo* z){
-	if (z == NULL) return -1;
-	return sqrtf((float)pow(z->parteReal,2)+(float)pow(z->parteImaginaria,2));
-}
-
 void print_usage() {
     printf("Usage: \n -r 640x480\n -c 0+0i\n -C 0.285-0,01i\n -w 4\n -H 4\n -o /home/julia.pgm\n  (or -o - for stdout)\n");
 }
@@ -192,10 +163,12 @@ int main(int argc, char * const argv[]){
 			pixel.parteImaginaria = -pasoVertical * (2 * y -1) + altoRectangulo / 2 + origen.parteImaginaria;
 
 			for (contadorBrillo = 0; contadorBrillo <= N; contadorBrillo++){
-				if (valorAbsoluto(&pixel) > 2) break;
+				float valorAbsoluto = sqrtf(pixel.parteReal * pixel.parteReal + pixel.parteImaginaria * pixel.parteImaginaria);
+				if (valorAbsoluto > 2) break;
 
-				multComplejos(&pixel, &pixel);
-				sumaComplejos(&pixel, &constanteC);
+				float temp = ((pixel.parteReal)*(pixel.parteReal))-((pixel.parteImaginaria)*(pixel.parteImaginaria)) + constanteC.parteReal;
+				pixel.parteImaginaria = ((pixel.parteImaginaria)*(pixel.parteReal))+((pixel.parteReal)*(pixel.parteImaginaria)) + constanteC.parteImaginaria;
+				pixel.parteReal = temp;
 
 
 			}
