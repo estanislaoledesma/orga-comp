@@ -1,6 +1,6 @@
 #!/bin/bash
 echo Compilando...
-gcc tp0_otraedicion.c -o tp0
+gcc -std=c99 tp0_otraedicion.c -o tp0 -lm
 
 echo Ejecutando...
-./tp0 -o -
+./tp0 -o -i

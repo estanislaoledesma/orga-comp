@@ -5,7 +5,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <unistd.h>
-//#include <getopt.h>
+#include <getopt.h>
 #define N 255
 
 typedef struct complejo{
@@ -244,7 +244,7 @@ int main(int argc, char * const argv[]){
     	}
 
     	 fclose(fp);
-    	 //remove(output);
+    	 remove(output);
 	}
 	return 0;
 }
