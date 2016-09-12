@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <unistd.h>
+//#include <getopt.h>
 #define N 255
 
 typedef struct complejo{
@@ -187,13 +188,13 @@ int main(int argc, char * const argv[]){
 		resolucionVertical = 480;
 	}
 
-	printf("Verificacion parametros: \n");
+	/*printf("Verificacion parametros: \n");
 	printf("Alto: %f, ancho: %f, altoR: %d, anchoR: %d \n", altoRectangulo, anchoRectangulo, resolucionVertical, resolucionHorizontal);
 	printf("Origen: ");
 	imprimirComplejo(&origen);
 	printf("\nConstante: ");
 	imprimirComplejo(&constanteC);
-	printf("\n\n");
+	printf("\n\n");*/
 
 
 	float pasoHorizontal = ((anchoRectangulo) / (float)(resolucionHorizontal))/2;
@@ -209,7 +210,7 @@ int main(int argc, char * const argv[]){
 	//fprintf(fp, "%d %d\n", resolucionHorizontal, resolucionVertical);
 	//fprintf(fp, "255\n");
 
-	fprintf(fp, "P2 \r%d %d \r255 \r", resolucionHorizontal, resolucionVertical);
+	fprintf(fp, "P2 \n%d %d \n255 \n", resolucionHorizontal, resolucionVertical);
 
 	for (int y = 1; y <= resolucionVertical; y++){
 		for (int x = 1; x <= resolucionHorizontal; x++){
@@ -226,22 +227,24 @@ int main(int argc, char * const argv[]){
 			}
 			fprintf(fp, "%d ", contadorBrillo );
 		}
-		fprintf(fp, "\r");
+		fprintf(fp, "\n");
 	}
 	rewind(fp);
 	fclose(fp);
 
 	if (salidaConsola == 1){
 
-		fp=fopen(output, "r");
-		char c;
-
-		while((c=fgetc(fp)) !=EOF){
+		fp=fopen(output, "rb+");
+		if(fp == NULL) return 1;
+		int c;
+		printf("El archivo generado es:\n");
+		
+		while((c=fgetc(fp)) != EOF){
         	printf( "%c", c );
     	}
 
     	 fclose(fp);
-    	 remove(output);
+    	 //remove(output);
 	}
 	return 0;
 }
