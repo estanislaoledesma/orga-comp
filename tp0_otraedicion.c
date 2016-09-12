@@ -5,6 +5,7 @@
 #include <ctype.h>
 #include <math.h>
 #include <unistd.h>
+#include <getopt.h>
 #define N 255
 
 typedef struct complejo{
