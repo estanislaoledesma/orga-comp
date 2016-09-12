@@ -5,17 +5,13 @@
 #include <ctype.h>
 #include <math.h>
 #include <unistd.h>
+#include <getopt.h>
 #define N 255
 
 typedef struct complejo{
 	float parteReal;
 	float parteImaginaria;
 }complejo;
-
-//z*w = (a + bi)*(c + di) = (ac-bd) + (ad+bc)i
-
-// c.real = a.real*b.real - a.img*b.img;
-// c.img = a.img*b.real + a.real*b.img;
 
 void multComplejos(complejo* z1, complejo* z2){
 	//Multiplica dos complejos. El resultado pisa el valor del primer argumento.
@@ -47,48 +43,8 @@ float valorAbsoluto(complejo* z){
 }
 
 void print_usage() {
-    printf("Usage: -r640x480 -c0+0i -C0.285-0,01i -W4 -H4 -o/home/julia.pgm\n");
+    printf("Usage: \n -r 640x480\n -c 0+0i\n -C 0.285-0,01i\n -w 4\n -H 4\n -o /home/julia.pgm\n  (or -o - for stdout)\n");
 }
-
-int parsearComplejo(complejo* z, char* strComplejo){
-	int i = 1;
-	int encontroSignoComplejo = 0;
-	char signoReal, signoComplejo;
-	int indiceSignoComplejo;
-	signoReal = strComplejo[0];
-	while (encontroSignoComplejo != 1){
-		if (!isdigit(strComplejo[i])){
-			encontroSignoComplejo = 1;
-			indiceSignoComplejo = i;
-			signoComplejo = strComplejo[i];
-		}
-		i++;
-	}
-
-	///printf("SIGNOCOMPLEJO %c\n", signoComplejo);
-	///printf("SIGNOREAL %c\n", signoReal);
-	char * pch;
-	pch = strtok(strComplejo + 1, &signoComplejo);
-	///printf("CAMPOREAL %s\n", pch);
-	z->parteReal = atoi(pch);
-	pch = strtok(strComplejo + indiceSignoComplejo + 1, "i");
-	z->parteImaginaria = atoi(pch);
-	if (signoReal == '-'){
-		z->parteReal = z->parteReal * -1;
-	}
-	if (signoComplejo == '-'){
-		z->parteImaginaria = z->parteImaginaria * -1;
-	}
-	//printf("CAMPOIM %s\n", pch);
-/*
-		resolucionHorizontal = atoi(pch);
-    	pch = strtok (NULL, "x");
-    	resolucionVertical = atoi(pch);*/
-
-	return 0;
-}
-
-
 
 
 int main(int argc, char * const argv[]){
@@ -105,18 +61,10 @@ int main(int argc, char * const argv[]){
 	char* constante;
 	char* output;
 	char* res;
+	char controli;
 	
 
-	/*
-	complejo* unComplejo = malloc(sizeof(complejo));
-	char complejoStr[] = "+202-5i";
-	int res = parsearComplejo(unComplejo, complejoStr);
-	imprimirComplejo(unComplejo);
-	free (unComplejo);
-	return 0;*/
 
-//-r640x480 -c0+0i -C0.285-0,01i -W4 -H4 -o-
-//-r640x480 -c0+0i -C0.285-0,01i -W4 -H4 -o/home/julia.pgm
 	pathToExe = argv[0];
 	int resolucionHorizontal, resolucionVertical;
 	float anchoRectangulo;
@@ -146,7 +94,13 @@ int main(int argc, char * const argv[]){
 			break;
 		case 'o' : 
 			encontroOutput = 1;
-			if (strcmp(optarg, "-") == 0) salidaConsola = 1;
+			if ((isalpha((char)optarg[0]) != 1) && (isdigit((char)optarg[0]) != 1)){
+				if (strcmp(optarg, "-") == 0) salidaConsola = 1;
+				else {
+					printf("fatal: cannot open output file.\n");
+					exit(0);
+				}
+			}
 			output = optarg;
 			break;
 		default: print_usage(); 
@@ -155,147 +109,111 @@ int main(int argc, char * const argv[]){
 	}
 
 	if (encontroOutput != 1){   ///UNICA CONDICION NECESARIA PARA CORRER EL PROGRAMA
-		printf("Falta especificar el parametro -o\n");
-		printf("-o /home/desktop/imagen.pgm\n");
-		printf("-o - (para salida standard)\n");
+		print_usage();
+		printf("El argumento -o es condición necesaria\n");
 		return -1;
 	} else {
 	}
 
-	complejo* constanteC = malloc(sizeof(complejo));
-	if (constanteC == NULL){
-		free(constanteC);
-		return 1;
-	}
+	complejo constanteC;
 
-	complejo* origen = malloc(sizeof(complejo));
-	if (origen == NULL){
-		free(origen);
-		free(constanteC);
-		return 1;
-	}
+	complejo origen;
 
-	complejo* pixel = malloc(sizeof(complejo));
-	if (pixel == NULL){
-		free(pixel);
-		free(origen);
-		free(constanteC);
-		return 1;
-	}
+	complejo pixel;
 
-	complejo* pixelPolinomio = malloc(sizeof(complejo));
-	if (pixelPolinomio == NULL){
-		free(pixelPolinomio);
-		free(pixel);
-		free(origen);
-		free(constanteC);
-	return 1;
-	}
+	complejo pixelPolinomio;
+	
 
 
 	if (encontroAlto == 1){
 	} else {
 		altoRectangulo = 4;
-		//altoRectangulo = 0.5;
 	}
 
 	if (encontroAncho == 1){
 	} else {
 		anchoRectangulo = 4;
-		//anchoRectangulo = 0.5;
 	}
 
 	if (encontroConst == 1){
-		if (parsearComplejo(constanteC, constante) !=0){
-			printf("Error obteniendo la constante compleja.\n");
+
+		int i;
+		i = sscanf(constante, "%f%f%c", &constanteC.parteReal, &constanteC.parteImaginaria, &controli);
+		if (i < 3){
 			print_usage();
-			return -1;
+			exit(0);
 		}
 	} else {
-		constanteC->parteReal = 0.285;
-		constanteC->parteImaginaria = -0.01;
+		constanteC.parteReal = 0.285;
+		constanteC.parteImaginaria = -0.01;
 	}
 
 	if (encontroOrigen == 1){
-		if (parsearComplejo(origen, ptrOrigen) != 0){
-			printf("Error obteniendo el origen complejo.\n");
+
+		int i;
+		i = sscanf(ptrOrigen, "%f%f%c", &origen.parteReal, &origen.parteImaginaria, &controli);
+		if (i < 3){
 			print_usage();
-			return -1;
+			exit(0);
 		}
 	} else {
-		//va 0 0
-		origen->parteReal = 0;
-		origen->parteImaginaria = 0;	
+		origen.parteReal = 0;
+		origen.parteImaginaria = 0;	
 	}
 
 	if (encontroRes == 1){
-		char * pch;
-		pch = strtok(res, "x");
-		resolucionHorizontal = atoi(pch);
-    	pch = strtok (NULL, "x");
-    	resolucionVertical = atoi(pch);
+    	int resVal;
+    	resVal = sscanf(res, "%dx%d", &resolucionHorizontal, &resolucionVertical);
+    	if (resVal < 2 || resolucionVertical == 0 || resolucionHorizontal == 0)
+    	{
+    		print_usage();
+    		exit(0);
+    	}
 	} else {
 		resolucionHorizontal = 640;
 		resolucionVertical = 480;
 	}
 
-	printf("Verificacion parametros: \n");
-	printf("Alto: %f, ancho: %f, altoR: %d, anchoR: %d \n", altoRectangulo, anchoRectangulo, resolucionVertical, resolucionHorizontal);
-	printf("Origen: ");
-	imprimirComplejo(origen);
-	printf("\nConstante: ");
-	imprimirComplejo(constanteC);
-	printf("\n\n");
 
-
-	float extremoIzq = origen->parteReal - ((anchoRectangulo) / 2);
-	float extremoSup = origen->parteImaginaria + ((altoRectangulo) / 2);
-
-	float pasoHorizontal = (anchoRectangulo) / (float)(resolucionHorizontal);
-	float pasoVertical = (altoRectangulo) / (float)(resolucionVertical);
+	float pasoHorizontal = ((anchoRectangulo) / (float)(resolucionHorizontal))/2;
+	float pasoVertical = ((altoRectangulo) / (float)(resolucionVertical))/2;
 	int brillo[resolucionHorizontal][resolucionVertical];
-	int corte = 256;
-	int contadorCorte = 0;
-
-	for (int y = 0; y < resolucionVertical; y++){
-		for (int x = 0; x < resolucionHorizontal; x++){
-			pixel->parteReal = extremoIzq + (pasoHorizontal/2) + (x * pasoHorizontal);
-			pixel->parteImaginaria = extremoSup - (pasoHorizontal/2) - (y * pasoVertical);
-
-			while ((contadorCorte < corte) && (valorAbsoluto(pixel) < 2)){
-				multComplejos(pixel, pixel);
-				sumaComplejos(pixel, constanteC);
-				contadorCorte++;
-			}
-			brillo[x][y] = contadorCorte;
-			if (x == 0 || y == 0 || x == resolucionHorizontal - 1 || y == resolucionVertical -1){
-				brillo[x][y] = 255;
-			}
-			contadorCorte = 0;
-		}
-	}
+	int contadorBrillo;
 
 	FILE *fp;
-	fp=fopen(output, "wb");
+	fp=fopen(output, "w");
 	if(fp == NULL) return 1;
 
-	fprintf(fp, "P2\n");
-	fprintf(fp, "%d %d\n", resolucionHorizontal, resolucionVertical);
-	fprintf(fp, "255\n");
+	fprintf(fp, "P2 \n%d %d \n255 \n", resolucionHorizontal, resolucionVertical);
 
-	for (int y = 0; y < resolucionVertical; y++){
-		for (int x = 0; x < resolucionHorizontal; x++){
-			fprintf(fp, "%d ",brillo[x][y]);
+	for (int y = 1; y <= resolucionVertical; y++){
+		for (int x = 1; x <= resolucionHorizontal; x++){
+			pixel.parteReal = pasoHorizontal * (2 * x -1) - anchoRectangulo / 2 + origen.parteReal;
+			pixel.parteImaginaria = -pasoVertical * (2 * y -1) + altoRectangulo / 2 + origen.parteImaginaria;
+
+			for (contadorBrillo = 0; contadorBrillo <= N; contadorBrillo++){
+				if (valorAbsoluto(&pixel) > 2) break;
+
+				multComplejos(&pixel, &pixel);
+				sumaComplejos(&pixel, &constanteC);
+
+
+			}
+			fprintf(fp, "%d ", contadorBrillo );
 		}
 		fprintf(fp, "\n");
 	}
+	rewind(fp);
 	fclose(fp);
 
 	if (salidaConsola == 1){
-		fp=fopen(output, "rt");
-		char c;
-		while((c=fgetc(fp)) !=EOF){
-        	printf("%c",c);
+
+		fp=fopen(output, "rb+");
+		if(fp == NULL) return 1;
+		int c;
+		
+		while((c=fgetc(fp)) != EOF){
+        	printf( "%c", c );
     	}
 
     	 fclose(fp);
