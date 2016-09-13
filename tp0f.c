@@ -71,9 +71,7 @@ int main(int argc, char * const argv[]){
 				break;
 			case 'o' : 
 				encontroOutput = 1;
-				if (strcmp(optarg,"-") == 0) salidaConsola = 1; else {
-
-				};
+				if (strcmp(optarg,"-") == 0) salidaConsola = 1;
 				output = optarg;
 				/*
 				if ((isalpha((char)optarg[0]) != 1) && (isdigit((char)optarg[0]) != 1)){
