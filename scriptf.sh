@@ -5,8 +5,8 @@ echo ///       Martes 13 de Septiembre de 2016
 echo ///       TP0 - Martin Queija - Estanislao - Agustin
 echo ///
 echo
-echo Compilando... -std=c99 tp0.c -o tp0 -lm
-gcc -std=c99 tp0.c -o tp0 -lm
+echo Compilando... -std=c99 tp0f.c -o tp0 -lm
+gcc -std=c99 tp0f.c -o tp0 -lm
 echo Ejecutando Pruebas...
 echo
 echo 1- Test positivo: genera imagen con nombre JuliaSet.pgm
