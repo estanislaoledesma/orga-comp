@@ -106,7 +106,7 @@ int main(int argc, char * const argv[]){
 		if (scanResult < 3){
 			printf("Error obteniendo constante compleja.\n");
 			print_usage();
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 	} else {
 		constanteC.parteReal = 0.285;
@@ -118,7 +118,7 @@ int main(int argc, char * const argv[]){
 		if (scanResult < 3){
 			printf("Error obteniendo origen complejo.\n");
 			print_usage();
-			exit(0);
+			exit(EXIT_FAILURE);
 		}
 	} else {
 		origen.parteReal = 0;
