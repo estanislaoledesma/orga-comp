@@ -153,9 +153,9 @@ int main(int argc, char * const argv[]){
 			print_usage();
 			exit(EXIT_FAILURE);
 		}
-		fprintf(fp, "P2 \n%d %d \n255 \n", resolucionHorizontal, resolucionVertical);	
+		
 	}
-
+	if (salidaConsola == 1) fprintf(stdout, "P2 \n%d %d \n255 \n", resolucionHorizontal, resolucionVertical); else fprintf(fp, "P2 \n%d %d \n255 \n", resolucionHorizontal, resolucionVertical);	
 	//debug printf("constantR %f constanteI %f orinenR %f origenI %f \n", constanteC.parteReal, constanteC.parteImaginaria, origen.parteReal, origen.parteImaginaria);	
 
 	for (int y = 1; y <= resolucionVertical; y++){
