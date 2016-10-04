@@ -1,4 +1,3 @@
-#!/bin/bash
 clear
 echo ///
 echo ///       Martes 13 de Septiembre de 2016
