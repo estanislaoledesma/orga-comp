@@ -17,6 +17,9 @@ typedef struct hola
 }hola_t;
 
 void hola_mundo(hola_t* params){
+	float uno = 10;
+	size_t dos = 20;
+	unsigned tres = 30;
 	params->a = 3;
 	params->e = params->f + params->g;
 	printf("Hola\n");

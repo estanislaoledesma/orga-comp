@@ -1,6 +1,10 @@
 #include <mips/regdef.h>
 #include <sys/syscall.h>
 
+#ifndef BUF_SZ 8192
+#define BUF_SZ 8192
+#endif
+
 	.text
 	.abicalls
 	.align 2
@@ -34,6 +38,11 @@ mips32_plot:
 	lw t0, 44(a0)	#t0: fd = parms->fd
 	sw t0, 20($fp)	#guardo fd en 20 + $fp
 
+	li a0, t0 #fd -> a0 para syscall
+	li a1, BUF_OFFSET($fp) #estas dos instrucciones las encontré en el grupo pero todavía no le agarro muy bien la mano
+	li a2, BUF_SZOFFSET($fp) #verificar cómo se hace esto 
+	li v0, SYS_write
+	syscall
 
 	.end
 
