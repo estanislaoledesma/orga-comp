@@ -144,6 +144,73 @@ mips32_plot:
 
 ##ACA va el ciclo, ponele que en cada ciclo el valor del shade del pixel lo tengo en t0, para llamar a shade a buffer haces
 
+							#Inicializaciones para el primer for
+
+	addu s1, zero, zero #s1: y = 0
+	l.s $f0, 20($fp) #f0: ci = parms->UL_Im
+	lw t1, 52($fp) #t1: parms-> y_res
+
+
+for1:
+	bge s1, t1, fin #si y >= y_res => fin
+
+							#Inicializaciones para el segundo for
+
+	addu s2, zero, zero 				#s2: x = 0
+	l.s $f1, 16($fp) 				#f1: cr = parms->UL_Re
+	lw t2, 48($fp) 					#t2: parms-> x_res
+
+for2:
+	bge s2, t2, fin_for1 				#si x >= x_res => fin_for1
+	mov.s $f2, $f1 					#f2: zr = cr
+	mov.s $f3, $f2 					#f3: zi = ci
+
+							#Inicializaciones para el tercer for
+	addu s3, zero, zero 				#s3: c = 0
+	lw t3, 56($fp) 					#t3: parms->shades
+
+for3:
+	bge s3, t3, fin_for2 				#si c >= shades => fin_for2
+	mul.s $f4, $f2, $f2 				#f4: zr * zr
+	mul.s $f5, $f3, $f3 				#f5: zi * zi
+	add.s $f4, $f4, $f5 				#f4: absz = zr * zr + zi * zi
+	l.s $f5, CTE_FOR3 					#f5 = CTE_FOR3
+	c.lt.s $f5, $f4  					#si CTE_FOR3 < absz => code = 1
+	bc1t fin_for2 						#si code = 1 => fin_for2
+	mul.s $f4, $f2, $f2 				#f4: zr * zr
+	mul.s $f5, $f3, $f3 				#f5: zi * zi
+	sub.s $f4, $f4, $f5 				#f4: zr * zr - zi * zi
+	add.s $f4, $f4, $f6 				#f4: sr = zr * zr - zi * zi + cpr
+	mul.s $f5, $f2, $f3 				#f5: zr * zi
+	l.s $f8, CTE_MULT 				#f8: CTE_MULT
+	mul.s $f5, $f5, $f8 				#f5: 2 * zr * zi
+	add.s $f5, $f5, $f7 				#f5: si = 2 * zr * zi + cpi
+	mov.s $f2, $f4 					#f2: zr = sr
+	mov.s $f3, $f5 					#f3: zi = si
+	addi s3, s3, 1 					#s3: ++c
+	b for3
+fin_for2:
+#	Segundo if
+
+	#Faltan guardar los regfistros que uso en shade_a_buffer, consecuentemente los de int to string etc
+
+	#En s3 queda el valor del shade, lo paso a a0 para imprimirlo con shade_a_buffer
+	move a0, s3
+	jal shade_a_buffer
+	
+	#Faltan restaurar los registros que hay que reponer para que el ciclo siga funcionando.
+
+
+	addi s2, s2, 1 					#s2: ++x
+	l.s $f8, 32($fp)				#f8: parms->d_re
+	add.s $f1, $f1, $f8 				#f1: cr += parms->d_re
+	b for2 						#vuelve a for2
+fin_for1:
+	addi s1, s1, 1 					#s1: ++y
+	l.s $f8, 36($fp) 				#f8: parms->d_im
+	add.s $f0, $f0, $f8 				#f0: ci += parms->d_im
+	b for1 						#vuelve a for1
+
 	sw s1, 80($fp)
 	sw s2, 84($fp)
 	sw s3, 88($fp)  ### ESTOS SON LOS REGISTROS QUE USA EL CICLO
