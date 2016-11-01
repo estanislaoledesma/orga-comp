@@ -2,11 +2,11 @@
 #include <sys/syscall.h>
 
 #ifndef BUF_SZ
-#define BUF_SZ 8192
+#define BUF_SZ 4
 #endif
 
-#define BUF_OFFSET 76 + BUF_SZ
-#define BUF_LOW_OFFSET 80
+#define BUF_OFFSET 100 + BUF_SZ
+#define BUF_LOW_OFFSET 104
 
 
 #define FP0_OFFSET BUF_OFFSET + 4
@@ -34,7 +34,7 @@
 
 
 
-#define SP_OFFSET FP7_OFFSET + 4
+#define SP_OFFSET S7_OFFSET + 4
 #define GP_OFFSET SP_OFFSET + 4        
 #define FP_OFFSET GP_OFFSET + 4         
 #define RA_OFFSET FP_OFFSET + 4       
@@ -108,18 +108,18 @@ mips32_plot:
 #	Guardo los registros flotantes y caller saved registers que voy a usar para luego reestablecerlos.
 #
 	
-	swc1 $f0, FP0_OFFSET($fp)
-	swc1 $f1, FP1_OFFSET($fp)
-	swc1 $f2, FP2_OFFSET($fp)
-	swc1 $f3, FP3_OFFSET($fp)
-	swc1 $f4, FP4_OFFSET($fp)
-	swc1 $f5, FP5_OFFSET($fp)
-	swc1 $f6, FP6_OFFSET($fp)
-	swc1 $f7, FP7_OFFSET($fp)
-	swc1 $f8, FP9_OFFSET($fp)
-	swc1 $f9, FP9_OFFSET($fp)
-	swc1 $f10, FP10_OFFSET($fp)
-	swc1 $f11, FP11_OFFSET($fp)
+	s.s $f0, FP0_OFFSET($fp)
+	s.s $f1, FP1_OFFSET($fp)
+	s.s $f2, FP2_OFFSET($fp)
+	s.s $f3, FP3_OFFSET($fp)
+	s.s $f4, FP4_OFFSET($fp)
+	s.s $f5, FP5_OFFSET($fp)
+	s.s $f6, FP6_OFFSET($fp)
+	s.s $f7, FP7_OFFSET($fp)
+	s.s $f8, FP9_OFFSET($fp)
+	s.s $f9, FP9_OFFSET($fp)
+	s.s $f10, FP10_OFFSET($fp)
+	s.s $f11, FP11_OFFSET($fp)
 
 	sw s0, S0_OFFSET($fp)
 	sw s1, S1_OFFSET($fp)
@@ -129,6 +129,9 @@ mips32_plot:
 	sw s5, S5_OFFSET($fp)
 	sw s6, S6_OFFSET($fp)
 	sw s7, S7_OFFSET($fp)
+
+	l.s $f6, 40($fp) #f6: cpr = parms->cp_re
+	l.s $f7, 44($fp) #f7: cpi = parms->cp_im
 
 	sw zero, 64($fp)				#inicializo el BUF_PTR
 
@@ -142,41 +145,42 @@ mips32_plot:
 							#Inicializaciones para el primer for
 
 	addu s1, zero, zero #s1: y = 0
-	lwc1 $f0, 20($fp) #f0: ci = parms->UL_Im
-	lwc1 t1, 52(a0) #t1: parms-> y_res
+	l.s $f0, 20($fp) #f0: ci = parms->UL_Im
+	lw t1, 52($fp) #t1: parms-> y_res
 
 
 for1:
-	bgte s1, t1, fin #si y >= y_res => fin_for1
+	bge s1, t1, fin #si y >= y_res => fin
 
 							#Inicializaciones para el segundo for
 
 	addu s2, zero, zero 				#s2: x = 0
-	lwc1 $f1, 16($fp) 				#f1: cr = parms->UL_Re
+	l.s $f1, 16($fp) 				#f1: cr = parms->UL_Re
 	lw t2, 48($fp) 					#t2: parms-> x_res
 
 for2:
-	bgte s2, t2, fin_for2 				#si x >= x_res => fin_for1
+	bge s2, t2, fin_for1 				#si x >= x_res => fin_for1
 	mov.s $f2, $f1 					#f2: zr = cr
-	mov.s $f3, $f2 					#f3: zi = ci
+	mov.s $f3, $f0 					#f3: zi = ci
 
 							#Inicializaciones para el tercer for
 	addu s3, zero, zero 				#s3: c = 0
 	lw t3, 56($fp) 					#t3: parms->shades
 
 for3:
-	bgte s3, t3, fin_for2 				#si c >= shades => fin_for2
+	bge s3, t3, fin_for2 				#si c >= shades => fin_for2
 	mul.s $f4, $f2, $f2 				#f4: zr * zr
 	mul.s $f5, $f3, $f3 				#f5: zi * zi
 	add.s $f4, $f4, $f5 				#f4: absz = zr * zr + zi * zi
-	lwc1 $f5, CTE_FOR3 				#f5 = CTE_FOR3
-	bgt $f4, $f5, fin_for2 				#si absz > CTE_FOR3 => fin_for2
+	l.s $f5, CTE_FOR3 					#f5 = CTE_FOR3
+	c.lt.s $f5, $f4  					#si CTE_FOR3 < absz => code = 1
+	bc1t fin_for2 						#si code = 1 => fin_for2
 	mul.s $f4, $f2, $f2 				#f4: zr * zr
 	mul.s $f5, $f3, $f3 				#f5: zi * zi
 	sub.s $f4, $f4, $f5 				#f4: zr * zr - zi * zi
 	add.s $f4, $f4, $f6 				#f4: sr = zr * zr - zi * zi + cpr
 	mul.s $f5, $f2, $f3 				#f5: zr * zi
-	lwc1 $f8, CTE_MULT 				#f8: CTE_MULT
+	l.s $f8, CTE_MULT 				#f8: CTE_MULT
 	mul.s $f5, $f5, $f8 				#f5: 2 * zr * zi
 	add.s $f5, $f5, $f7 				#f5: si = 2 * zr * zi + cpi
 	mov.s $f2, $f4 					#f2: zr = sr
@@ -184,59 +188,69 @@ for3:
 	addi s3, s3, 1 					#s3: ++c
 	b for3
 fin_for2:
-#	Segundo if
 
-	#Faltan guardar los registros que uso en shade_a_buffer, consecuentemente los de int to string etc
+	sw s1, 80($fp)
+	sw s2, 84($fp)
+	sw s3, 88($fp)  ### ESTOS SON LOS REGISTROS QUE USA EL CICLO
+	sw t1, 92($fp) ###tienen lugares especiales en el stack si necesitas guardar otro hay que hacer mas lugar y cambiar el excel y los defines
+	sw t2, 96($fp)
+	sw t3, 100($fp)
+	
 
-	#En s3 queda el valor del shade, lo paso a a0 para imprimirlo con shade_a_buffer
 	move a0, s3
 	jal shade_a_buffer
 	
-	#Faltan restaurar los registros que hay que reponer para que el ciclo siga funcionando.
+	lw s1, 80($fp)
+	lw s2, 84($fp)
+	lw s3, 88($fp)
+	lw t1, 92($fp)  ### REPONGO LOS REGISTROS QUE USA EL CICLO
+	lw t2, 96($fp)
+	lw t3, 100($fp)
 
 
 	addi s2, s2, 1 					#s2: ++x
-	lwc1 $f8, 32($fp)				#f8: parms->d_re
+	l.s $f8, 32($fp)				#f8: parms->d_re
 	add.s $f1, $f1, $f8 				#f1: cr += parms->d_re
 	b for2 						#vuelve a for2
 fin_for1:
 	addi s1, s1, 1 					#s1: ++y
-	lwc1 $f8, 36($fp) 				#f8: parms->d_im
-	add.s $f0, $f0, $f8 				#f0: ci += parms->d_im
+	l.s $f8, 36($fp) 				#f8: parms->d_im
+	sub.s $f0, $f0, $f8 			#f0: ci -= parms->d_im
 	b for1 						#vuelve a for1
 
 
-							#Antes de terminar, flusheo lo que queda en el buffer
+							
 
+	
+
+fin:
+#Antes de terminar, flusheo lo que queda en el buffer
 	sw ra, 68($fp)
 	sw a0, 72($fp)
 	lw a2, 64($fp)					#Establezco en a2 la cantidad a flushear: Lo que queda en el buffer = BUF_PTR = 64($fp)
 	jal flush_buffer
 	lw ra, 68($fp)
 	lw a0, 72($fp)
-
-fin:
-
 	#Reestablezco los registros flotantes y caller saved registers a sus valores originales
 
-	lwc1 $f0, FP0_OFFSET($fp)
-	lwc1 $f1, FP1_OFFSET($fp)
-	lwc1 $f2, FP2_OFFSET($fp)
-	lwc1 $f3, FP3_OFFSET($fp)
-	lwc1 $f4, FP4_OFFSET($fp)
-	lwc1 $f5, FP5_OFFSET($fp)
-	lwc1 $f6, FP6_OFFSET($fp)
-	lwc1 $f7, FP7_OFFSET($fp)
-	lwc1 $f8, FP9_OFFSET($fp)
-	lwc1 $f9, FP9_OFFSET($fp)
-	lwc1 $f10, FP10_OFFSET($fp)
-	lwc1 $f11, FP11_OFFSET($fp)
+	l.s $f0, FP0_OFFSET($fp)
+	l.s $f1, FP1_OFFSET($fp)
+	l.s $f2, FP2_OFFSET($fp)
+	l.s $f3, FP3_OFFSET($fp)
+	l.s $f4, FP4_OFFSET($fp)
+	l.s $f5, FP5_OFFSET($fp)
+	l.s $f6, FP6_OFFSET($fp)
+	l.s $f7, FP7_OFFSET($fp)
+	l.s $f8, FP9_OFFSET($fp)
+	l.s $f9, FP9_OFFSET($fp)
+	l.s $f10, FP10_OFFSET($fp)
+	l.s $f11, FP11_OFFSET($fp)
 
 	lw s0, S0_OFFSET($fp)
 	lw s1, S1_OFFSET($fp)
 	lw s2, S2_OFFSET($fp)
 	lw s3, S3_OFFSET($fp)
-	lw s4, S4_OFFSET($fp)
+ 	lw s4, S4_OFFSET($fp)
 	lw s5, S5_OFFSET($fp)
 	lw s6, S6_OFFSET($fp)
 	lw s7, S7_OFFSET($fp)
@@ -289,13 +303,17 @@ shade_a_buffer:
 	sw ra, 68($fp)
 	jal inttostr
 	lw ra, 68($fp)
+
+	move s2, v0
 	
 	move s6, zero			#s6 = 0
 	la s7, stringbuffer		#s7 = stringbufferadress
 loop:	add s4, s7, s6			#s4 = stringbufferadress + s6
 	addi s6, s6, 1			#s6 = s6 + 1 
+
 	lb t2, 0(s4)			#guardo el primer byte del int de dir(s4) en t2
 	sb t2, 0(s5)			#lo guardo en s5
+
 	addi s1, s1, 1			#incremento BUF_PTR
 	addi s5, s5, 1			#incremento el puntero al buffer
 	bne s1, BUF_SZ, next 		#si BUF_PTR no es igual a BUF_SZ NO flusheo
@@ -310,15 +328,16 @@ loop:	add s4, s7, s6			#s4 = stringbufferadress + s6
 	addi s1, zero, 0 		#flushee, entonces reseteo el buffptr
 	add s5, s0, zero		#reseteo el puntero al buffer	
 next:	
-	addi v0, v0, -1			#decremento la cantidad de chars guardados en el buffer
-	bne  v0, 0, loop  		#si la cantidad de chars es != 0 loopeo
+	addi s2, s2, -1			#decremento la cantidad de chars guardados en el buffer
+	bne  s2, 0, loop  		#si la cantidad de chars es != 0 loopeo
 
 	addi t4, zero, 10		#asci code new line
-	sb t4, 0(s5)			#guardo new line
-	addi s1, s1, 1			#incremento BUF_PTR
-	addi s5, s5, 1			#incremento el puntero al buffer
-	bne s1, BUF_SZ, next2 		#si BUF_PTR no es igual a BUF_SZ NO flusheo
+	sb t4, 0(s5)	
 	
+	addi s1, s1, 1			#incremento BUF_PTR
+	addi s5, s5, 1			#incremento el puntero al buffer		#guardo new line
+	bne s1, BUF_SZ, next2 		#si BUF_PTR no es igual a BUF_SZ NO flusheo
+
 
 	sw ra, 68($fp)
 	sw a0, 72($fp)
@@ -328,7 +347,7 @@ next:
 	lw a0, 72($fp)
 	addi s1, zero, 0 		#flushee, entonces reseteo el buffptr
 	add s5, s0, zero		#reseteo el puntero al buffer	
-
+	jr ra
 
 next2:	sw s1, 64($fp) # guardo el buff ptr en el stack
 	jr ra
@@ -338,11 +357,11 @@ next2:	sw s1, 64($fp) # guardo el buff ptr en el stack
 #Flush Buffer: flushea el buffer en su totalidad al File Pointer en 60(sp), requiere en a2 la cantidad de bytes a flushear
 
 flush_buffer:
-	li v0, SYS_write
-	lw a0, 60(sp)
-	addi a1, $fp, BUF_LOW_OFFSET
+	li v0, SYS_write 		#cargo la instrucción para escribir en v0
+	lw a0, 60(sp) 			#cargo el file pointer en a0
+	addi a1, $fp, BUF_LOW_OFFSET #cargo el offset del buffer en a1
 	syscall
-	sw zero, 64($fp)
+	sw zero, 64($fp) 		#Reseteo el buff ptr
 	jr ra
 
 
@@ -353,49 +372,50 @@ flush_buffer:
 print_header:
 	move s6, zero			#s6 = 0 (buffer pointer)
 	addi s0, $fp, BUF_LOW_OFFSET	#s0 = BUFFER_LOW
-	add s6, s6, s0
+	add s6, s6, s0   		#s6 = BUFFER_LOW + s6 (buffer pointer)
 	addi t0, zero, 80		#80 = 'P'
-	sb t0, 0(s6)
-	addi s6, s6, 1
+	sb t0, 0(s6) 			#'P' en buffer
+	addi s6, s6, 1 			#s6++
 	addi t0, zero, 50		#50 = '2'
-	sb t0, 0(s6)
-	addi s6, s6, 1
+	sb t0, 0(s6)			#'2' en buffer
+	addi s6, s6, 1 			#s6++
 	addi t0, zero, 10		#10 = '\n'
-	sb t0, 0(s6)
-	addi s6, s6, 1
-
-	lw a0, 48($fp)			#Cargo en a0 el valor de x_res
-	sw ra, 68($fp)
-	jal inttostr			#llamo a inttostr
-	lw ra, 68($fp)
+	sb t0, 0(s6) 			#'\n' en buffer
+	addi s6, s6, 1 			#s6++
 	la s7, stringbuffer		#s7 = stringbufferadress
-	add t2, zero, zero
-looph1:	add t1, t2, s7
-	lb t0, 0(t1)
-	sb t0, 0(s6)
-	addi t2, t2, 1
-	addi s6, s6, 1
-	bne v0, t2, looph1
+	lw a0, 48($fp)			#Cargo en a0 el valor de x_res
+	sw ra, 68($fp) 			#Guardo la dirección de retorno en 68($fp)
+	jal inttostr			#llamo a inttostr
+	lw ra, 68($fp) 			#Recupero la dirección de retorno
+
+	add t2, zero, zero		#t2 = 0
+looph1:	add t1, t2, s7 		#t1 = stringbufferaddress + t2(contador de caracteres)
+	lb t0, 0(t1) 			#primer elemento del stringbuffer en t0
+	sb t0, 0(s6) 			#almaceno primer elemento del stringbuffer en buffer
+	addi t2, t2, 1 			#t2++
+	addi s6, s6, 1 			#s6++
+	bne v0, t2, looph1 		#cantidad de caracteres a imprimir != cantidad de caracteres en buffer => looph1
 	addi t0, zero, 10		#10 = '\n'
-	sb t0, 0(s6)
-	addi s6, s6, 1
+	sb t0, 0(s6) 			#'\n' en buffer
+	addi s6, s6, 1 			#s6++
 
 	lw a0, 52($fp)			#Cargo en a0 el valor de y_res
-	sw ra, 68($fp)
+	sw ra, 68($fp) 			#Guardo la dirección de retorno en 68($fp)
 	jal inttostr			#llamo a inttostr
-	lw ra, 68($fp)
+	lw ra, 68($fp) 			#Recupero la direccion de retorno
 	la s7, stringbuffer		#s7 = stringbufferadress
-	add t2, zero, zero
-looph2:	add t1, t2, s7
-	lb t0, 0(t1)
-	sb t0, 0(s6)
-	addi t2, t2, 1
-	addi s6, s6, 1
-	bne v0, t2, looph2
+	add t2, zero, zero 		#t2 = 0 (contador de caracteres)
+looph2:	add t1, t2, s7 		#t1 = stringbufferaddress + t2(contador de caracteres)
+	lb t0, 0(t1)			#primer elemento del stringbuffer en t0
+	sb t0, 0(s6)			#almaceno primer elemento del stringbuffer en buffer
+	addi t2, t2, 1 			#t2++
+	addi s6, s6, 1 			#s6++
+	bne v0, t2, looph2		#cantidad de caracteres a imprimir != cantidad de caracteres en buffer => looph2
 	addi t0, zero, 10		#10 = '\n'
-	sb t0, 0(s6)
-	addi s6, s6, 1
+	sb t0, 0(s6) 			#'\n' en buffer
+	addi s6, s6, 1 			#s6++
 
+#	Repito pasos anteriores con shades
 	lw a0, 56($fp)			#Cargo en a0 el valor de shades
 	sw ra, 68($fp)
 	jal inttostr			#llamo a inttostr
@@ -414,16 +434,17 @@ looph3:	add t1, t2, s7
 
 	addi s0, $fp, BUF_LOW_OFFSET	#s0 = BUFFER_LOW
 	sub a2, s6, s0			#Establezco la cantidad a flushear
-	sw ra, 68($fp)
-	sw a0, 72($fp)
-	jal flush_buffer
-	lw ra, 68($fp)
-	lw a0, 72($fp)
+	sw ra, 68($fp) 			#Guardo la dirección de retorno en 68($fp)
+	sw a0, 72($fp) 			#Guardo a0 en 72($fp)
+	jal flush_buffer 		#llamo a flush_buffer
+	lw ra, 68($fp) 			#Recupero la dirección de retorno
+	lw a0, 72($fp)			#Recupero a0
 	jr ra
 
 
 
 	.end mips32_plot
+
 
 .data
 stringbuffer:   .space 32
