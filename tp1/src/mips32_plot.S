@@ -2,7 +2,7 @@
 #include <sys/syscall.h>
 
 #ifndef BUF_SZ
-#define BUF_SZ 4
+#define BUF_SZ 8192
 #endif
 
 #define BUF_OFFSET 100 + BUF_SZ
