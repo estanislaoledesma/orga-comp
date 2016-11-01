@@ -197,7 +197,7 @@ fin_for2:
 	sw t3, 100($fp)
 	
 
-	move a0, t0
+	move a0, s3
 	jal shade_a_buffer
 	
 	lw s1, 80($fp)
@@ -219,17 +219,18 @@ fin_for1:
 	b for1 						#vuelve a for1
 
 
-							#Antes de terminar, flusheo lo que queda en el buffer
+							
 
+	
+
+fin:
+#Antes de terminar, flusheo lo que queda en el buffer
 	sw ra, 68($fp)
 	sw a0, 72($fp)
 	lw a2, 64($fp)					#Establezco en a2 la cantidad a flushear: Lo que queda en el buffer = BUF_PTR = 64($fp)
 	jal flush_buffer
 	lw ra, 68($fp)
 	lw a0, 72($fp)
-
-fin:
-
 	#Reestablezco los registros flotantes y caller saved registers a sus valores originales
 
 	l.s $f0, FP0_OFFSET($fp)
