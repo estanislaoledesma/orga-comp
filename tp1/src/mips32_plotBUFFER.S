@@ -142,8 +142,6 @@ mips32_plot:
 	jal print_header
 
 
-##ACA va el ciclo, ponele que en cada ciclo el valor del shade del pixel lo tengo en t0, para llamar a shade a buffer haces
-
 							#Inicializaciones para el primer for
 
 	addu s1, zero, zero #s1: y = 0
@@ -163,7 +161,7 @@ for1:
 for2:
 	bge s2, t2, fin_for1 				#si x >= x_res => fin_for1
 	mov.s $f2, $f1 					#f2: zr = cr
-	mov.s $f3, $f2 					#f3: zi = ci
+	mov.s $f3, $f0 					#f3: zi = ci
 
 							#Inicializaciones para el tercer for
 	addu s3, zero, zero 				#s3: c = 0
@@ -190,26 +188,6 @@ for3:
 	addi s3, s3, 1 					#s3: ++c
 	b for3
 fin_for2:
-#	Segundo if
-
-	#Faltan guardar los regfistros que uso en shade_a_buffer, consecuentemente los de int to string etc
-
-	#En s3 queda el valor del shade, lo paso a a0 para imprimirlo con shade_a_buffer
-	move a0, s3
-	jal shade_a_buffer
-	
-	#Faltan restaurar los registros que hay que reponer para que el ciclo siga funcionando.
-
-
-	addi s2, s2, 1 					#s2: ++x
-	l.s $f8, 32($fp)				#f8: parms->d_re
-	add.s $f1, $f1, $f8 				#f1: cr += parms->d_re
-	b for2 						#vuelve a for2
-fin_for1:
-	addi s1, s1, 1 					#s1: ++y
-	l.s $f8, 36($fp) 				#f8: parms->d_im
-	add.s $f0, $f0, $f8 				#f0: ci += parms->d_im
-	b for1 						#vuelve a for1
 
 	sw s1, 80($fp)
 	sw s2, 84($fp)
@@ -230,9 +208,15 @@ fin_for1:
 	lw t3, 100($fp)
 
 
-
-
-
+	addi s2, s2, 1 					#s2: ++x
+	l.s $f8, 32($fp)				#f8: parms->d_re
+	add.s $f1, $f1, $f8 				#f1: cr += parms->d_re
+	b for2 						#vuelve a for2
+fin_for1:
+	addi s1, s1, 1 					#s1: ++y
+	l.s $f8, 36($fp) 				#f8: parms->d_im
+	add.s $f0, $f0, $f8 				#f0: ci += parms->d_im
+	b for1 						#vuelve a for1
 
 
 							#Antes de terminar, flusheo lo que queda en el buffer
