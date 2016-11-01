@@ -215,7 +215,7 @@ fin_for2:
 fin_for1:
 	addi s1, s1, 1 					#s1: ++y
 	l.s $f8, 36($fp) 				#f8: parms->d_im
-	add.s $f0, $f0, $f8 				#f0: ci += parms->d_im
+	sub.s $f0, $f0, $f8 				#f0: ci -= parms->d_im
 	b for1 						#vuelve a for1
 
 
