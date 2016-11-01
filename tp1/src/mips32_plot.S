@@ -107,7 +107,7 @@ mips32_plot:
 #
 #	Guardo los registros flotantes y caller saved registers que voy a usar para luego reestablecerlos.
 #
-	
+error:					#Si vuelvo de error restauro todo, en v0 ya hay valor negativo representando error
 	s.s $f0, FP0_OFFSET($fp)
 	s.s $f1, FP1_OFFSET($fp)
 	s.s $f2, FP2_OFFSET($fp)
@@ -361,6 +361,7 @@ flush_buffer:
 	lw a0, 60(sp) 			#cargo el file pointer en a0
 	addi a1, $fp, BUF_LOW_OFFSET #cargo el offset del buffer en a1
 	syscall
+	blt v0, zero, error		#si v0 < 0 go to error
 	sw zero, 64($fp) 		#Reseteo el buff ptr
 	jr ra
 
