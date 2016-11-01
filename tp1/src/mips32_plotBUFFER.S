@@ -1,0 +1,401 @@
+#include <mips/regdef.h>
+#include <sys/syscall.h>
+
+#ifndef BUF_SZ
+#define BUF_SZ 4
+#endif
+
+#define BUF_OFFSET 100 + BUF_SZ
+#define BUF_LOW_OFFSET 104
+
+
+#define FP0_OFFSET BUF_OFFSET + 4
+#define FP1_OFFSET FP0_OFFSET + 4
+#define FP2_OFFSET FP1_OFFSET + 4
+#define FP3_OFFSET FP2_OFFSET + 4
+#define FP4_OFFSET FP3_OFFSET + 4
+#define FP5_OFFSET FP4_OFFSET + 4
+#define FP6_OFFSET FP5_OFFSET + 4
+#define FP7_OFFSET FP6_OFFSET + 4
+#define FP8_OFFSET FP7_OFFSET + 4
+#define FP9_OFFSET FP8_OFFSET + 4
+#define FP10_OFFSET FP9_OFFSET + 4
+#define FP11_OFFSET FP10_OFFSET + 4
+
+
+#define S0_OFFSET FP11_OFFSET + 4
+#define S1_OFFSET S0_OFFSET + 4
+#define S2_OFFSET S1_OFFSET + 4
+#define S3_OFFSET S2_OFFSET + 4
+#define S4_OFFSET S3_OFFSET + 4
+#define S5_OFFSET S4_OFFSET + 4
+#define S6_OFFSET S5_OFFSET + 4
+#define S7_OFFSET S6_OFFSET + 4
+
+
+
+#define SP_OFFSET S7_OFFSET + 4
+#define GP_OFFSET SP_OFFSET + 4        
+#define FP_OFFSET GP_OFFSET + 4         
+#define RA_OFFSET FP_OFFSET + 4       
+#define STACK_SZ RA_OFFSET + 4
+
+	.text
+	.abicalls
+	.align 2
+	.globl 	mips32_plot
+	.ent 	mips32_plot
+
+mips32_plot:
+	.frame 	$fp, STACK_SZ, ra
+	
+	.set 	noreorder
+	.cpload t9
+	.set 	reorder
+
+	subu sp, sp, STACK_SZ 			# 4(SRA) + 15 + BUF_SZ (LTA) + 4 (ABA)
+	
+	.cprestore GP_OFFSET			#guardo gp en 80 + sp
+	sw $fp, FP_OFFSET(sp)			#guardo $fp en 84 + sp
+	sw ra, RA_OFFSET(sp)			#guardo ra en 88 + sp
+
+	move $fp, sp 				#$fp = sp (desde aca se usa $fp)
+
+
+	sw a0, STACK_SZ($fp)			#guardo el parametro(*parms) en la ABA de la funcion que me llamo
+	
+#
+#	Guardo la data de *params en el stack local.
+#
+
+	lw t0, 0(a0)					
+	sw t0, 16($fp)					#guardo UL_Re en 16 + $fp
+
+	lw t0, 4(a0)
+	sw t0, 20($fp)					#guardo UL_Im en 20 + $fp
+
+	lw t0, 8(a0)
+	sw t0, 24($fp)					#guardo LR_Re en 24 + $fp
+
+	lw t0, 12(a0)
+	sw t0, 28($fp)					#guardo LR_Im en 28 + $fp
+
+	lw t0, 16(a0)
+	sw t0, 32($fp)					#guardo D_Re en 32 + $fp
+
+	lw t0, 20(a0)					
+	sw t0, 36($fp)					#guardo D_Im en 36 + $fp
+
+	lw t0, 24(a0)					
+	sw t0, 40($fp)					#guardo CP_Re en 40 + $fp
+
+	lw t0, 28(a0)					
+	sw t0, 44($fp)					#guardo CP_Im en 44 + $fp
+
+	lw t0, 32(a0)
+	sw t0, 48($fp)					#guardo X_RES en 48 + $fp
+
+	lw t0, 36(a0)
+	sw t0, 52($fp)					#guardo Y_RES en 52 + $fp
+
+	lw t0, 40(a0)
+	sw t0, 56($fp)					#guardo SHADES en 56 + $fp
+
+	lw t0, 44(a0)
+	sw t0, 60($fp)					#guardo FILE POINTER en 60 + $fp
+
+#
+#	Guardo los registros flotantes y caller saved registers que voy a usar para luego reestablecerlos.
+#
+	
+	s.s $f0, FP0_OFFSET($fp)
+	s.s $f1, FP1_OFFSET($fp)
+	s.s $f2, FP2_OFFSET($fp)
+	s.s $f3, FP3_OFFSET($fp)
+	s.s $f4, FP4_OFFSET($fp)
+	s.s $f5, FP5_OFFSET($fp)
+	s.s $f6, FP6_OFFSET($fp)
+	s.s $f7, FP7_OFFSET($fp)
+	s.s $f8, FP9_OFFSET($fp)
+	s.s $f9, FP9_OFFSET($fp)
+	s.s $f10, FP10_OFFSET($fp)
+	s.s $f11, FP11_OFFSET($fp)
+
+	sw s0, S0_OFFSET($fp)
+	sw s1, S1_OFFSET($fp)
+	sw s2, S2_OFFSET($fp)
+	sw s3, S3_OFFSET($fp)
+	sw s4, S4_OFFSET($fp)
+	sw s5, S5_OFFSET($fp)
+	sw s6, S6_OFFSET($fp)
+	sw s7, S7_OFFSET($fp)
+
+	l.s $f6, 40($fp) #f6: cpr = parms->cp_re
+	l.s $f7, 44($fp) #f7: cpi = parms->cp_im
+
+	sw zero, 64($fp)				#inicializo el BUF_PTR
+
+###############################################
+###############################################
+
+
+	jal print_header
+
+
+##ACA va el ciclo, ponele que en cada ciclo el valor del shade del pixel lo tengo en t0, para llamar a shade a buffer haces
+
+	sw s1, 80($fp)
+	sw s2, 84($fp)
+	sw s3, 88($fp)  ### ESTOS SON LOS REGISTROS QUE USA EL CICLO
+	sw t1, 92($fp) ###tienen lugares especiales en el stack si necesitas guardar otro hay que hacer mas lugar y cambiar el excel y los defines
+	sw t2, 96($fp)
+	sw t3, 100($fp)
+	
+
+	move a0, t0
+	jal shade_a_buffer
+	
+	lw s1, 80($fp)
+	lw s2, 84($fp)
+	lw s3, 88($fp)
+	lw t1, 92($fp)  ### REPONGO LOS REGISTROS QUE USA EL CICLO
+	lw t2, 96($fp)
+	lw t3, 100($fp)
+
+
+
+
+
+
+
+							#Antes de terminar, flusheo lo que queda en el buffer
+
+	sw ra, 68($fp)
+	sw a0, 72($fp)
+	lw a2, 64($fp)					#Establezco en a2 la cantidad a flushear: Lo que queda en el buffer = BUF_PTR = 64($fp)
+	jal flush_buffer
+	lw ra, 68($fp)
+	lw a0, 72($fp)
+
+fin:
+
+	#Reestablezco los registros flotantes y caller saved registers a sus valores originales
+
+	l.s $f0, FP0_OFFSET($fp)
+	l.s $f1, FP1_OFFSET($fp)
+	l.s $f2, FP2_OFFSET($fp)
+	l.s $f3, FP3_OFFSET($fp)
+	l.s $f4, FP4_OFFSET($fp)
+	l.s $f5, FP5_OFFSET($fp)
+	l.s $f6, FP6_OFFSET($fp)
+	l.s $f7, FP7_OFFSET($fp)
+	l.s $f8, FP9_OFFSET($fp)
+	l.s $f9, FP9_OFFSET($fp)
+	l.s $f10, FP10_OFFSET($fp)
+	l.s $f11, FP11_OFFSET($fp)
+
+	lw s0, S0_OFFSET($fp)
+	lw s1, S1_OFFSET($fp)
+	lw s2, S2_OFFSET($fp)
+	lw s3, S3_OFFSET($fp)
+ 	lw s4, S4_OFFSET($fp)
+	lw s5, S5_OFFSET($fp)
+	lw s6, S6_OFFSET($fp)
+	lw s7, S7_OFFSET($fp)
+
+	move sp, $fp 				#restauro valor de sp
+	lw ra, RA_OFFSET(sp)			#restauro valor de ra
+	lw $fp, FP_OFFSET(sp)			#restauro valor de $fp
+
+	addu sp, sp, STACK_SZ			#subo stack pointer
+
+	jr ra 					#vuelvo a la funcion caller
+
+
+###############################################
+###############################################
+
+#Int to String: el int va en a0, cantidad de chars guardados en v0
+
+inttostr:
+	addi t0, zero, 10		#establezco divisor base 10
+	move t1, zero			#t1=0
+	la t2, stringbuffer		#t2=stringbufferadress
+	add t3, a0, zero		#t3=a0 (int a imprimir)
+loop1:	div t3, t0			#t3/10 division:t4 resto:t5
+	mflo t4
+	mfhi t5
+	addi t1, t1, 1			#aumento contador de caracteres
+	bne  t3, 0, loop1		#cuando la division sea 0 ya termino el loop
+	add t3, a0, zero		#t3=a0 (int a imprimir)
+	move v0, t1			#v0=cant chars guardados
+loop2:	div t3, t0			#vuelvo a divir esta vez guardando en el inicio de stringbuffer de atras para adelante
+	mflo t4
+	mfhi t5
+	addi t1, t1, -1			#decremento el contador de chars
+	add t6, t2, t1			#t6=offset en string buffer = stringbuffer + t1
+	addi t5, t5, 48			#le sumo 48 al valor del resto para que quede en la escala de los decimales ascii
+	sb t5, 0(t6)			#lo guardo en t6
+	bne t3, 0, loop2		#cuando la division sea 0 ya temrino el loop
+	jr ra
+
+###############################################
+
+#Shade a buffer: Escribe el int en a0 al buffer, si el buffer se llena se flushea.
+
+shade_a_buffer:
+	addi s0, $fp, BUF_LOW_OFFSET	#s0 = BUFFER_LOW
+	lw s1, 64($fp)			#Cargo a s1 el BUF_PTR
+	add s5, s0, s1			#s5 = BUFFER_LOW + BUF_PTR
+
+	sw ra, 68($fp)
+	jal inttostr
+	lw ra, 68($fp)
+
+	move s2, v0
+	
+	move s6, zero			#s6 = 0
+	la s7, stringbuffer		#s7 = stringbufferadress
+loop:	add s4, s7, s6			#s4 = stringbufferadress + s6
+	addi s6, s6, 1			#s6 = s6 + 1 
+
+	lb t2, 0(s4)			#guardo el primer byte del int de dir(s4) en t2
+	sb t2, 0(s5)			#lo guardo en s5
+
+	addi s1, s1, 1			#incremento BUF_PTR
+	addi s5, s5, 1			#incremento el puntero al buffer
+	bne s1, BUF_SZ, next 		#si BUF_PTR no es igual a BUF_SZ NO flusheo
+
+
+	sw ra, 68($fp)
+	sw a0, 72($fp)
+	li a2, BUF_SZ			#Establezco la cantidad a flushear (todo)
+	jal flush_buffer
+	lw ra, 68($fp)
+	lw a0, 72($fp)
+	addi s1, zero, 0 		#flushee, entonces reseteo el buffptr
+	add s5, s0, zero		#reseteo el puntero al buffer	
+next:	
+	addi s2, s2, -1			#decremento la cantidad de chars guardados en el buffer
+	bne  s2, 0, loop  		#si la cantidad de chars es != 0 loopeo
+
+	addi t4, zero, 10		#asci code new line
+	sb t4, 0(s5)	
+	
+	addi s1, s1, 1			#incremento BUF_PTR
+	addi s5, s5, 1			#incremento el puntero al buffer		#guardo new line
+	bne s1, BUF_SZ, next2 		#si BUF_PTR no es igual a BUF_SZ NO flusheo
+
+
+	sw ra, 68($fp)
+	sw a0, 72($fp)
+	li a2, BUF_SZ			#Establezco la cantidad a flushear (todo)
+	jal flush_buffer
+	lw ra, 68($fp)
+	lw a0, 72($fp)
+	addi s1, zero, 0 		#flushee, entonces reseteo el buffptr
+	add s5, s0, zero		#reseteo el puntero al buffer	
+	jr ra
+
+next2:	sw s1, 64($fp) # guardo el buff ptr en el stack
+	jr ra
+
+###############################################
+
+#Flush Buffer: flushea el buffer en su totalidad al File Pointer en 60(sp), requiere en a2 la cantidad de bytes a flushear
+
+flush_buffer:
+	li v0, SYS_write 		#cargo la instrucción para escribir en v0
+	lw a0, 60(sp) 			#cargo el file pointer en a0
+	addi a1, $fp, BUF_LOW_OFFSET #cargo el offset del buffer en a1
+	syscall
+	sw zero, 64($fp) 		#Reseteo el buff ptr
+	jr ra
+
+
+###############################################
+
+#Print header: Imprime los datos del encabezado de la imagen
+	
+print_header:
+	move s6, zero			#s6 = 0 (buffer pointer)
+	addi s0, $fp, BUF_LOW_OFFSET	#s0 = BUFFER_LOW
+	add s6, s6, s0   		#s6 = BUFFER_LOW + s6 (buffer pointer)
+	addi t0, zero, 80		#80 = 'P'
+	sb t0, 0(s6) 			#'P' en buffer
+	addi s6, s6, 1 			#s6++
+	addi t0, zero, 50		#50 = '2'
+	sb t0, 0(s6)			#'2' en buffer
+	addi s6, s6, 1 			#s6++
+	addi t0, zero, 10		#10 = '\n'
+	sb t0, 0(s6) 			#'\n' en buffer
+	addi s6, s6, 1 			#s6++
+	la s7, stringbuffer		#s7 = stringbufferadress
+	lw a0, 48($fp)			#Cargo en a0 el valor de x_res
+	sw ra, 68($fp) 			#Guardo la dirección de retorno en 68($fp)
+	jal inttostr			#llamo a inttostr
+	lw ra, 68($fp) 			#Recupero la dirección de retorno
+
+	add t2, zero, zero		#t2 = 0
+looph1:	add t1, t2, s7 		#t1 = stringbufferaddress + t2(contador de caracteres)
+	lb t0, 0(t1) 			#primer elemento del stringbuffer en t0
+	sb t0, 0(s6) 			#almaceno primer elemento del stringbuffer en buffer
+	addi t2, t2, 1 			#t2++
+	addi s6, s6, 1 			#s6++
+	bne v0, t2, looph1 		#cantidad de caracteres a imprimir != cantidad de caracteres en buffer => looph1
+	addi t0, zero, 10		#10 = '\n'
+	sb t0, 0(s6) 			#'\n' en buffer
+	addi s6, s6, 1 			#s6++
+
+	lw a0, 52($fp)			#Cargo en a0 el valor de y_res
+	sw ra, 68($fp) 			#Guardo la dirección de retorno en 68($fp)
+	jal inttostr			#llamo a inttostr
+	lw ra, 68($fp) 			#Recupero la direccion de retorno
+	la s7, stringbuffer		#s7 = stringbufferadress
+	add t2, zero, zero 		#t2 = 0 (contador de caracteres)
+looph2:	add t1, t2, s7 		#t1 = stringbufferaddress + t2(contador de caracteres)
+	lb t0, 0(t1)			#primer elemento del stringbuffer en t0
+	sb t0, 0(s6)			#almaceno primer elemento del stringbuffer en buffer
+	addi t2, t2, 1 			#t2++
+	addi s6, s6, 1 			#s6++
+	bne v0, t2, looph2		#cantidad de caracteres a imprimir != cantidad de caracteres en buffer => looph2
+	addi t0, zero, 10		#10 = '\n'
+	sb t0, 0(s6) 			#'\n' en buffer
+	addi s6, s6, 1 			#s6++
+
+#	Repito pasos anteriores con shades
+	lw a0, 56($fp)			#Cargo en a0 el valor de shades
+	sw ra, 68($fp)
+	jal inttostr			#llamo a inttostr
+	lw ra, 68($fp)
+	la s7, stringbuffer		#s7 = stringbufferadress
+	add t2, zero, zero
+looph3:	add t1, t2, s7
+	lb t0, 0(t1)
+	sb t0, 0(s6)
+	addi t2, t2, 1
+	addi s6, s6, 1
+	bne v0, t2, looph3
+	addi t0, zero, 10		#10 = '\n'
+	sb t0, 0(s6)
+	addi s6, s6, 1
+
+	addi s0, $fp, BUF_LOW_OFFSET	#s0 = BUFFER_LOW
+	sub a2, s6, s0			#Establezco la cantidad a flushear
+	sw ra, 68($fp) 			#Guardo la dirección de retorno en 68($fp)
+	sw a0, 72($fp) 			#Guardo a0 en 72($fp)
+	jal flush_buffer 		#llamo a flush_buffer
+	lw ra, 68($fp) 			#Recupero la dirección de retorno
+	lw a0, 72($fp)			#Recupero a0
+	jr ra
+
+
+
+	.end mips32_plot
+
+
+.data
+stringbuffer:   .space 32
+CTE_FOR3: .float 4.0
+CTE_MULT: .float 2
+
