@@ -5,10 +5,7 @@
 #define BUF_SZ 8192
 #endif
 
-#define BUF_OFFSET 108 + BUF_SZ	
-#define BUF_LOW_OFFSET 112
-
-#define S1_OFFSET  BUF_OFFSET + 8
+#define S1_OFFSET 116
 #define S2_OFFSET S1_OFFSET + 4
 #define S3_OFFSET S2_OFFSET + 4
 
@@ -82,6 +79,9 @@ mips32_plot:
 	lw t0, 44(a0)
 	sw t0, 76($fp)					#guardo FILE POINTER en 76 + $fp
 
+	la t0, buffer 
+	sw t0, 104($fp)					#guardo dirección de buffer en 104 + $fp
+
 #
 #	Guardo los registros flotantes y caller saved registers que voy a usar para luego reestablecerlos.
 #
@@ -100,8 +100,8 @@ error:					#Si vuelvo de error restauro todo, en v0 ya hay valor negativo repres
 ###############################################
 
 	lw a0, 76($fp)			#a0: file descriptor
-	addi a1, $fp, BUF_LOW_OFFSET			#a1: $fp + BUF_LOW_OFFSET
-	addi a2, $fp, 80			#a2: BUF_PTR
+	la a1, buffer			#a1: BUF_LOW_OFFSET
+	lw a2, 80($fp)			#a2: BUF_PTR
 	lw a3, 64($fp)			#a3: x_res
 	lw t0, 68($fp)			#t0: y_res
 	sw t0, 16($fp)			#a4 (16 + $fp): y_res
@@ -109,6 +109,8 @@ error:					#Si vuelvo de error restauro todo, en v0 ya hay valor negativo repres
 	sw t0, 20($fp)			#a5 (20 + $fp): shades
 
 	jal print_header
+
+	sw v0, 80($fp)			#reinicio BUF_PTR
 
 	#Inicializaciones para el primer for
 
@@ -166,11 +168,15 @@ fin_for2:
 	
 	move a0, s3 			#a0: shade (c)
 	lw a1, 76($fp)			#a1: file descriptor
-	addi a2, $fp, BUF_LOW_OFFSET			#a2: $fp + BUF_LOW_OFFSET
-	addi a3, $fp, 80			#a3: BUF_PTR
+	la a2, buffer			#a2: BUF_LOW_OFFSET
+	lw a3, 80($fp)			#a3: BUF_PTR
 	jal shade_a_buffer
+
+	sw v0, 80($fp)			#reinicio BUF_PTR
 	
 	### REPONGO LOS REGISTROS QUE USA EL CICLO
+
+
 
 	lw t1, 92($fp)
 	lw t2, 96($fp)
@@ -196,10 +202,12 @@ fin:
 #Antes de terminar, flusheo lo que queda en el buffer
 	sw a0, 84($fp)
 	lw a0, 76($fp)				#a0: file descriptor
-	addi a1, $fp, BUF_LOW_OFFSET #a1: $fp + BUF_LOW_OFFSET  
+	la a1, buffer 				#a1: BUF_LOW_OFFSET  
 	lw a2, 80($fp)				#Establezco en a2 la cantidad a flushear: Lo que queda en el buffer = BUF_PTR = 80($fp)
-	addi a3, $fp, 80			#a3: BUF_PTR
+	lw a3, 80($fp)			#a3: BUF_PTR
 	jal flush_buffer
+
+	sw v0, 80($fp)				#reinicio BUF_PTR
 
 	lw a0, 84($fp)
 	#Reestablezco los caller saved registers a sus valores originales
@@ -310,7 +318,7 @@ shade_a_buffer:
 #	lw s1, 64($fp)			#Cargo a s1 el BUF_PTR
 	move s0, a2			#s0 = BUFFER_LOW(a2)
 	move s1, a3			#Cargo a s1 el BUF_PTR(a3)
-	add s5, s0, s1			#s5 = BUFFER_LOW + BUF_PTR
+	addu s5, s0, s1			#s5 = BUFFER_LOW + BUF_PTR
 
 	jal inttostr
 
@@ -330,7 +338,7 @@ loop:	add s4, s7, s6			#s4 = stringbufferadress + s6
 
 	move s3, a0				#Guardo el int de a0 en s3
 	move a0, a1				#a0: file descriptor
-	move a1, a2				#a1: $fp + BUF_LOW_OFFSET
+	move a1, a2				#a1: BUF_LOW_OFFSET
 
 	li a2, BUF_SZ			#Establezco la cantidad a flushear (todo)
 	jal flush_buffer
@@ -363,6 +371,8 @@ next:
 next2:	sw s1, 64($fp) # guardo el buff ptr en el stack
 
 fin_shade:
+
+#	move v0, s1 			#v0 = buf_ptr
 
 	#Restablezco caller saved registers.
 	lw s0, 16($fp)
@@ -411,7 +421,7 @@ flush_buffer:
 	li v0, SYS_write 		#cargo la instrucción para escribir en v0
 	syscall
 	blt v0, zero, error		#si v0 < 0 go to error
-	sw zero, 0(a3) 		#Reseteo el buff ptr
+	#sw zero, 0(a3) 		#Reseteo el buff ptr
 
 	move sp, $fp 			#restauro valor de sp
 	lw ra, 12(sp)			#restauro valor de ra
@@ -424,8 +434,9 @@ flush_buffer:
 
 ###############################################
 
-#Print header: Imprime los datos del encabezado de la imagen. En a0 file descriptor, a1 $fp + BUF_LOW_OFFSET, a2 BUF_PTR
+#Print header: Imprime los datos del encabezado de la imagen. En a0 file descriptor, a1 BUF_LOW_OFFSET, a2 BUF_PTR
 #a3 x_res, a4 y_res y a5 shades (estos últimos dos posiciones en ABA de caller 16($fp) y 20($fp), respectivamente).
+#v0 es BUF_PTR
 	
 print_header:
  	.frame 	$fp, 64, ra
@@ -528,6 +539,9 @@ looph3:	add t1, t2, s7
 	lw a0, 28($fp)			#Recupero a0
 
 	#Restablezco caller saved registers.
+
+	move v0, zero 			#establezco v0: BUF_PTR = 0
+
 	lw s0, 32($fp)
 	lw s6, 36($fp)
 	lw s7, 40($fp)
@@ -548,6 +562,7 @@ looph3:	add t1, t2, s7
 
 .data
 stringbuffer:   .space 32
+buffer:		.space BUF_SZ
 CTE_FOR3: .float 4.0
 CTE_MULT: .float 2
 
