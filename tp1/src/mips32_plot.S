@@ -5,7 +5,7 @@
 #define BUF_SZ 8192
 #endif
 
-#define BUF_OFFSET 108 + BUF_SZ
+#define BUF_OFFSET 108 + BUF_SZ	
 #define BUF_LOW_OFFSET 112
 
 #define S1_OFFSET  BUF_OFFSET + 8
@@ -101,7 +101,7 @@ error:					#Si vuelvo de error restauro todo, en v0 ya hay valor negativo repres
 
 	lw a0, 76($fp)			#a0: file descriptor
 	addi a1, $fp, BUF_LOW_OFFSET			#a1: $fp + BUF_LOW_OFFSET
-	lw a2, 80($fp)			#a2: BUF_PTR
+	addi a2, $fp, 80			#a2: BUF_PTR
 	lw a3, 64($fp)			#a3: x_res
 	lw t0, 68($fp)			#t0: y_res
 	sw t0, 16($fp)			#a4 (16 + $fp): y_res
@@ -167,7 +167,7 @@ fin_for2:
 	move a0, s3 			#a0: shade (c)
 	lw a1, 76($fp)			#a1: file descriptor
 	addi a2, $fp, BUF_LOW_OFFSET			#a2: $fp + BUF_LOW_OFFSET
-	lw a3, 80($fp)			#a3: BUF_PTR
+	addi a3, $fp, 80			#a3: BUF_PTR
 	jal shade_a_buffer
 	
 	### REPONGO LOS REGISTROS QUE USA EL CICLO
@@ -197,8 +197,8 @@ fin:
 	sw a0, 84($fp)
 	lw a0, 76($fp)				#a0: file descriptor
 	addi a1, $fp, BUF_LOW_OFFSET #a1: $fp + BUF_LOW_OFFSET  
-	lw a2, 64($fp)				#Establezco en a2 la cantidad a flushear: Lo que queda en el buffer = BUF_PTR = 64($fp)
-	
+	lw a2, 80($fp)				#Establezco en a2 la cantidad a flushear: Lo que queda en el buffer = BUF_PTR = 80($fp)
+	addi a3, $fp, 80			#a3: BUF_PTR
 	jal flush_buffer
 
 	lw a0, 84($fp)
@@ -308,8 +308,8 @@ shade_a_buffer:
 
 #	addi s0, $fp, BUF_LOW_OFFSET			#s0 = BUFFER_LOW
 #	lw s1, 64($fp)			#Cargo a s1 el BUF_PTR
-	li s0, a2			#s0 = BUFFER_LOW(a2)
-	li s1, a3			#Cargo a s1 el BUF_PTR(a3)
+	move s0, a2			#s0 = BUFFER_LOW(a2)
+	move s1, a3			#Cargo a s1 el BUF_PTR(a3)
 	add s5, s0, s1			#s5 = BUFFER_LOW + BUF_PTR
 
 	jal inttostr
@@ -455,7 +455,7 @@ print_header:
 
 	move s6, zero			#s6 = 0 (buffer pointer)
 #	addi s0, $fp, BUF_LOW_OFFSET	#s0 = BUFFER_LOW
-	li s0, a1				#s0 = BUFFER_LOW
+	move s0, a1				#s0 = BUFFER_LOW
 	add s6, s6, s0   		#s6 = BUFFER_LOW + s6 (buffer pointer)
 	addi t0, zero, 80		#80 = 'P'
 	sb t0, 0(s6) 			#'P' en buffer
@@ -469,7 +469,7 @@ print_header:
 	la s7, stringbuffer		#s7 = stringbufferadress
 
 #	lw a0, 48($fp)			#Cargo en a0 el valor de x_res
-	li a0, a3				#Cargo en a0 el valor de x_res
+	move a0, a3				#Cargo en a0 el valor de x_res
 	jal inttostr			#llamo a inttostr
 
 	add t2, zero, zero		#t2 = 0
@@ -519,7 +519,7 @@ looph3:	add t1, t2, s7
 	addi s6, s6, 1
 
 #	addi s0, $fp, BUF_LOW_OFFSET	#s0 = BUFFER_LOW
-	li s0, a1				#s0 = BUFFER_LOW
+	move s0, a1				#s0 = BUFFER_LOW
 	move a3, a2				#a3: BUF_PTR
 	sub a2, s6, s0			#Establezco la cantidad a flushear
 	sw a0, 28($fp) 			#Guardo a0 en 28($fp)
