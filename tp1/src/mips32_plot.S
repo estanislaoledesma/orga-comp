@@ -152,9 +152,7 @@ for3:
 
 fin_for2:
 
-	sw s1, 116($fp)
-	sw s2, 120($fp)
-	sw s3, 124($fp)  	### ESTOS SON LOS REGISTROS QUE USA EL CICLO
+					  	### ESTOS SON LOS REGISTROS QUE USA EL CICLO
 	sw t1, 92($fp) 		###tienen lugares especiales en el stack si necesitas guardar otro hay que hacer mas lugar y cambiar el excel y los defines
 	sw t2, 96($fp)
 	sw t3, 100($fp)
@@ -166,6 +164,10 @@ fin_for2:
 	lw a3, 80($fp)					#a3 = BUF_PTR
 
 	jal shade_a_buffer
+
+	lw t1, 92($fp) 		
+	lw t2, 96($fp)
+	lw t3, 100($fp)
 
 	sw v0, 80($fp)					#BUF_PTR = v0
 
