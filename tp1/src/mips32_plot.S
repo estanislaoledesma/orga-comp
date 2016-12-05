@@ -76,11 +76,6 @@ mips32_plot:
 #
 #	Guardo los registros flotantes y caller saved registers que voy a usar para luego reestablecerlos.
 #
-error:					#Si vuelvo de error restauro todo, en v0 ya hay valor negativo representando error
-
-	sw s1, 116($fp)				
-	sw s2, 120($fp)
-	sw s3, 124($fp)
 
 	l.s $f6, 56($fp) 				#f6: cpr = parms->cp_re
 	l.s $f7, 60($fp) 				#f7: cpi = parms->cp_im
@@ -100,6 +95,8 @@ error:					#Si vuelvo de error restauro todo, en v0 ya hay valor negativo repres
 	sw t0, 20($fp)					#a5 = shades
 
 	jal print_header
+
+	bltz v0, error 					#Si v0 < 0 -> Error
 
 	sw v0, 80($fp)					#BUF_PTR = v0
 
@@ -169,6 +166,8 @@ fin_for2:
 	lw t2, 96($fp)
 	lw t3, 100($fp)
 
+	bltz v0, error 					#Si v0 < 0 -> Error
+
 	sw v0, 80($fp)					#BUF_PTR = v0
 
 
@@ -195,7 +194,23 @@ fin:
 	la a1, buffer 					#a1 = BUF_LOW_OFFSET
 	lw a2, 80($fp)					#Establezco en a2 la cantidad a flushear: Lo que queda en el buffer = BUF_PTR = 64($fp)
 	jal flush_buffer
-	#Reestablezco los registros flotantes y caller saved registers a sus valores originales
+
+	bltz v0, error 					#Si v0 < 0 -> Error
+	b noerror
+
+
+	#En caso de error hay que salir del programa, ya hay en v0 codigo de error negativo asi que no hace falta establecerlo
+error:
+	#PRINT IO ERROR
+	li a0, 2						#file descriptor stderror
+	la a1, fraseError				#imprimo "IO ERROR"
+	li a2, 9						#"IO ERROR\0" pesa 9 bytes
+
+	syscall
+
+
+noerror:
+	#Reestablezco caller saved registers a sus valores originales
 
 	lw s1, 116($fp)
 	lw s2, 120($fp)
@@ -209,6 +224,8 @@ fin:
 	addu sp, sp, 144				#subo stack pointer
 
 	jr ra 							#vuelvo a la funcion caller
+
+
 
 
 ###############################################
@@ -330,6 +347,9 @@ loop:	add s4, s7, s6				#s4 = stringbufferadress + s6
 	li a2, BUF_SZ					#Establezco la cantidad a flushear (todo)
 	move a3, s1 					#a3 = BUF_PTR
 	jal flush_buffer
+
+	bltz v0, fin_shade 				#Si v0 < 0 -> Error entonces salgo de la funcion inmediatamente
+
 	lw a0, 64($fp)					#Restablezco parámetros
 	lw a1, 68($fp)					
 	lw a2, 72($fp)
@@ -354,6 +374,9 @@ next:
 	li a2, BUF_SZ					#Establezco la cantidad a flushear (todo)
 	move a3, s1 					#a3 = BUF_PTR
 	jal flush_buffer
+
+	bltz v0, fin_shade 				#Si v0 < 0 -> Error entonces salgo de la funcion inmediatamente
+
 	lw a0, 64($fp)					#Restablezco parámetros
 	lw a1, 68($fp)					
 	lw a2, 72($fp)
@@ -420,12 +443,14 @@ flush_buffer:
 
 	syscall
 
-	blt v0, zero, error				#si v0 < 0 go to error
+	blt v0, zero, finflush			#si v0 < 0 go to finFlush
 
 	move v0, zero 					#v0 = 0
 
 #Restauro saved registers
-	
+
+finflush:
+
 	move sp, $fp 			#restauro valor de sp
 
 	lw gp, 4(sp)			#restauro valor de gp
@@ -538,6 +563,8 @@ looph3:	add t1, t2, s7
 
 	jal flush_buffer 		#llamo a flush_buffer
 
+	#Si flush buffer da error no hago nada porque en v0 ya hay valor negativo, dejo que la funcion retorne con ese valor
+
 	lw a2, 72($fp)			#Recupero a2
 
 
@@ -565,4 +592,5 @@ stringbuffer:   .space 32
 buffer: .space BUF_SZ
 CTE_FOR3: .float 4.0
 CTE_MULT: .float 2
+fraseError: .asciiz "IO ERROR"
 
